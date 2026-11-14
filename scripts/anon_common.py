@@ -146,7 +146,7 @@ def anonymize_text(text: str, date_delta: timedelta = SHIFT_2026_TO_2025) -> str
         return text
     text = rewrite_emails(text)
     for pat, repl in _CI_PATTERNS:
-        text = pat.sub(repl, text)
+        text = pat.sub(lambda _, r=repl: r, text)
     if date_delta:
         text = shift_iso_timestamps(text, date_delta)
         text = shift_slash_dates(text, date_delta)

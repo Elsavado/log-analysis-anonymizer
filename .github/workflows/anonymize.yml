@@ -2,6 +2,11 @@ name: Anonymize Drive Logs
 
 on:
   workflow_dispatch:
+    inputs:
+      run_bots:
+        description: 'Run anon_bots (already completed in 43623427189)'
+        required: false
+        default: 'false'
 
 jobs:
   anon_small_and_otrf:
@@ -58,6 +63,7 @@ jobs:
           rclone copy out "shintiru:anonymized" --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" --transfers 8
 
   anon_bots:
+    if: ${{ github.event.inputs.run_bots == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
