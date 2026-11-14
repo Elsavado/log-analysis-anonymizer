@@ -1,0 +1,98 @@
+name: Anonymize Drive Logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  anon_small_and_otrf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Download Okta, Linux, timelines, OTRF
+        run: |
+          mkdir -p in out
+          rclone copy "shintiru:" in --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" \
+            --include "okta_*" --include "linux_*" --include "g*_timeline.txt" --include "otrf_*" --transfers 8
+      - name: Anonymize
+        run: python scripts/anon_small.py in out
+      - name: Upload anonymized files to Drive
+        run: |
+          rclone copy out "shintiru:anonymized" --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" --transfers 8
+
+  anon_evtx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install evtx
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Download EVTX files
+        run: |
+          mkdir -p in out
+          rclone copy "shintiru:" in --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" --include "g*_*.evtx" --transfers 8
+      - name: Anonymize EVTX
+        run: python scripts/anon_evtx.py in out
+      - name: Upload anonymized EVTX to Drive
+        run: |
+          rclone copy out "shintiru:anonymized" --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" --transfers 8
+
+  anon_bots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Stream-anonymize Splunk BOTS v1
+        run: python scripts/anon_bots.py "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a"
+
+  anon_lanl:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [redteam, dns, flows, proc, auth]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Stream-anonymize LANL ${{ matrix.kind }}
+        run: python scripts/anon_lanl.py "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" "${{ matrix.kind }}"
