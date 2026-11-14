@@ -8,7 +8,7 @@ from pathlib import Path
 
 from evtx import PyEvtxParser
 
-from anon_common import SHIFT_2026_TO_2015, anonymize_text
+from anon_common import SHIFT_2026_TO_2025, anonymize_text
 
 
 def main():
@@ -21,15 +21,15 @@ def main():
         if not m:
             continue
         grp, channel = m.group(1), m.group(2)
-        out_name = f"env4_win_{grp}_20151113_{channel}.jsonl.gz"
+        out_name = f"env4_win_{grp}_20251113_{channel}.jsonl.gz"
         print(f"Anonymizing {p.name} -> {out_name}", flush=True)
         parser = PyEvtxParser(str(p))
         with gzip.open(out_dir / out_name, "wt", encoding="utf-8") as fout:
             for rec in parser.records():
                 obj = {
                     "record_id": rec.get("event_record_id"),
-                    "timestamp": anonymize_text(str(rec.get("timestamp", "")), SHIFT_2026_TO_2015),
-                    "xml": anonymize_text(rec.get("data", ""), SHIFT_2026_TO_2015),
+                    "timestamp": anonymize_text(str(rec.get("timestamp", "")), SHIFT_2026_TO_2025),
+                    "xml": anonymize_text(rec.get("data", ""), SHIFT_2026_TO_2025),
                 }
                 fout.write(json.dumps(obj) + "\n")
     print("EVTX anonymization complete.")

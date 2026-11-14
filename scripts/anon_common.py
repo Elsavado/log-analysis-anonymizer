@@ -4,8 +4,8 @@ import hashlib
 import re
 from datetime import datetime, timedelta
 
-# -4018 days = -(11 * 365 + 3 leap days), keeping 2026-11-13 -> 2015-11-13
-SHIFT_2026_TO_2015 = timedelta(days=-4018)
+# -365 days shifts 2026-11-13 -> 2025-11-13
+SHIFT_2026_TO_2025 = timedelta(days=-365)
 SHIFT_2020_TO_2015 = timedelta(days=-1827)
 SHIFT_2016_TO_2015 = timedelta(days=-366)
 
@@ -109,7 +109,7 @@ def shift_slash_dates(text: str, delta: timedelta) -> str:
     return SLASH_TS_RE.sub(_repl, text)
 
 
-def anonymize_text(text: str, date_delta: timedelta = SHIFT_2026_TO_2015) -> str:
+def anonymize_text(text: str, date_delta: timedelta = SHIFT_2026_TO_2025) -> str:
     if not text:
         return text
     text = rewrite_emails(text)

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from anon_common import (
     SHIFT_2020_TO_2015,
-    SHIFT_2026_TO_2015,
+    SHIFT_2026_TO_2025,
     anonymize_text,
 )
 
@@ -18,18 +18,18 @@ def anon_okta(in_dir: Path, out_dir: Path):
     # Summary CSV
     csv_in = in_dir / "okta_summary_2026-11.csv"
     if csv_in.exists():
-        txt = anonymize_text(csv_in.read_text(encoding="utf-8", errors="ignore"), SHIFT_2026_TO_2015)
-        (out_dir / "env3_idp_summary_2015-11.csv").write_text(txt, encoding="utf-8")
+        txt = anonymize_text(csv_in.read_text(encoding="utf-8", errors="ignore"), SHIFT_2026_TO_2025)
+        (out_dir / "env3_idp_summary_2025-11.csv").write_text(txt, encoding="utf-8")
 
     # JSONL.GZ logs
     for idx, p in enumerate(sorted(in_dir.glob("okta_system_log_*.jsonl.gz")), start=1):
-        out_name = f"env3_idp_system_log_2015-11_part{idx:02d}.jsonl.gz"
+        out_name = f"env3_idp_system_log_2025-11_part{idx:02d}.jsonl.gz"
         with gzip.open(p, "rt", encoding="utf-8", errors="ignore") as fin, \
              gzip.open(out_dir / out_name, "wt", encoding="utf-8") as fout:
             for line in fin:
                 if not line.strip():
                     continue
-                fout.write(anonymize_text(line, SHIFT_2026_TO_2015))
+                fout.write(anonymize_text(line, SHIFT_2026_TO_2025))
 
 
 def anon_linux(in_dir: Path, out_dir: Path):
@@ -40,11 +40,11 @@ def anon_linux(in_dir: Path, out_dir: Path):
         if not m:
             continue
         grp, suffix = m.group(1), m.group(2)
-        out_name = f"env4_lin_{grp}_20151113_{suffix}"
+        out_name = f"env4_lin_{grp}_20251113_{suffix}"
         with open(p, "r", encoding="utf-8", errors="ignore") as fin, \
              open(out_dir / out_name, "w", encoding="utf-8") as fout:
             for line in fin:
-                fout.write(anonymize_text(line, SHIFT_2026_TO_2015))
+                fout.write(anonymize_text(line, SHIFT_2026_TO_2025))
 
 
 def anon_timelines(in_dir: Path, out_dir: Path):
@@ -53,8 +53,8 @@ def anon_timelines(in_dir: Path, out_dir: Path):
         if not m:
             continue
         grp = m.group(1)
-        out_name = f"env4_win_{grp}_20151113_timeline.txt"
-        txt = anonymize_text(p.read_text(encoding="utf-8", errors="ignore"), SHIFT_2026_TO_2015)
+        out_name = f"env4_win_{grp}_20251113_timeline.txt"
+        txt = anonymize_text(p.read_text(encoding="utf-8", errors="ignore"), SHIFT_2026_TO_2025)
         (out_dir / out_name).write_text(txt, encoding="utf-8")
 
 
