@@ -7,13 +7,13 @@ import subprocess
 import sys
 import tarfile
 
-from anon_common import SHIFT_2016_TO_2015, anonymize_text
+from anon_common import SHIFT_PLUS_1_YEAR, anonymize_text
 
 WE_HOST_RE = re.compile(r"\bwe(\d{4})(srv|desk)\b", re.IGNORECASE)
 
 
 def anon_bots_line(line: str) -> str:
-    line = anonymize_text(line, SHIFT_2016_TO_2015)
+    line = anonymize_text(line, SHIFT_PLUS_1_YEAR)
     line = WE_HOST_RE.sub(r"mh\1\2", line)
     return line
 
@@ -41,7 +41,7 @@ def main():
             rc = out_proc.wait()
             if rc != 0:
                 raise RuntimeError(f"rclone rcat failed with {rc}")
-        dst_name = f"env1_corp_logs_2015-08_part{part_idx:03d}.log.gz"
+        dst_name = f"env1_corp_logs_2017-08_part{part_idx:03d}.log.gz"
         print(f"Opening upload stream -> anonymized/{dst_name}", flush=True)
         out_proc = subprocess.Popen(
             ["rclone", "rcat", f"{remote}anonymized/{dst_name}", "--drive-root-folder-id", drive_id],

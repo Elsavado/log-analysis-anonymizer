@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 
 # -365 days shifts 2026-11-13 -> 2025-11-13
 SHIFT_2026_TO_2025 = timedelta(days=-365)
-SHIFT_2020_TO_2015 = timedelta(days=-1827)
-SHIFT_2016_TO_2015 = timedelta(days=-366)
+# +365 days moves non-2026 logs forward by 1 year (2020 -> 2021, 2016 -> 2017)
+SHIFT_PLUS_1_YEAR = timedelta(days=365)
 
 EMAIL_RE = re.compile(r"\b([A-Za-z0-9._%+\-]+)@([A-Za-z0-9.\-]+\.[A-Za-z]{2,})\b")
 ISO_TS_RE = re.compile(r"\b(20\d{2})-(\d{2})-(\d{2})([T ])(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+\-]\d{2}:?\d{2})?\b")
@@ -54,6 +54,8 @@ LITERAL_REPLACEMENTS = [
     ("WAYNECORPINC", "MERIDIANHQ"),
     ("waynecorpinc", "meridianhq"),
     ("wayneenterprises", "meridiancorp"),
+    ("Wayne Enterprises", "Meridian Corp"),
+    ("Dunder Mifflin", "Northbridge Supply"),
     ("imreallynotbatman.com", "meridian-portal.com"),
     ("gotham-fortigate", "hq-edge-fw01"),
     ("gotham", "metro-hq"),
@@ -61,6 +63,13 @@ LITERAL_REPLACEMENTS = [
     # Okta / Personal names
     ("joseph", "alex.mercer"),
     ("Joseph", "Alex Mercer"),
+    ("sekwa", "ops_user"),
+    ("shintiru", "corp_admin"),
+    ("pbeesly", "e.carter"),
+    ("mscott", "r.hale"),
+    ("dschrute", "d.kline"),
+    ("jhalpert", "j.reed"),
+    ("bwayne", "m.vance"),
     # LANL
     ("win.alnl.gov", "win.oakridge-corp.local"),
     ("lanl.gov392-3080", "oakridge-corp.local"),

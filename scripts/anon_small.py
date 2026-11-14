@@ -8,8 +8,8 @@ import zipfile
 from pathlib import Path
 
 from anon_common import (
-    SHIFT_2020_TO_2015,
     SHIFT_2026_TO_2025,
+    SHIFT_PLUS_1_YEAR,
     anonymize_text,
 )
 
@@ -60,7 +60,7 @@ def anon_timelines(in_dir: Path, out_dir: Path):
 
 def anon_otrf(in_dir: Path, out_dir: Path):
     for idx, zp in enumerate(sorted(in_dir.glob("otrf_apt29_*.zip")), start=1):
-        out_name = f"env2_corp_day{idx}_2015-05.jsonl.gz"
+        out_name = f"env2_corp_day{idx}_2021-05.jsonl.gz"
         with zipfile.ZipFile(zp) as zf, \
              gzip.open(out_dir / out_name, "wt", encoding="utf-8") as fout:
             for name in zf.namelist():
@@ -69,7 +69,7 @@ def anon_otrf(in_dir: Path, out_dir: Path):
                 with zf.open(name) as fin:
                     for raw in fin:
                         line = raw.decode("utf-8", errors="ignore")
-                        fout.write(anonymize_text(line, SHIFT_2020_TO_2015))
+                        fout.write(anonymize_text(line, SHIFT_PLUS_1_YEAR))
 
 
 def main():
