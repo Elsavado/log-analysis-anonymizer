@@ -1,0 +1,111 @@
+name: Analyze Drive Logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  analyze_evtx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install evtx
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Download EVTX files
+        run: |
+          mkdir -p logs
+          rclone copy "shintiru:" logs --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" --include "g*_*.evtx" --transfers 8
+      - name: Analyze EVTX
+        run: |
+          mkdir -p out
+          python scripts/analyze_evtx.py logs out/evtx_analysis.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evtx-analysis
+          path: out/evtx_analysis.json
+
+  analyze_small_and_otrf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Download Okta, Linux, OTRF
+        run: |
+          mkdir -p logs out
+          rclone copy "shintiru:" logs --drive-root-folder-id "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" --include "okta_*" --include "linux_*" --include "otrf_*" --transfers 8
+      - name: Analyze
+        run: |
+          python scripts/analyze_other.py okta_linux logs out/okta_linux_analysis.json
+          python scripts/analyze_other.py otrf logs out/otrf_analysis.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: small-otrf-analysis
+          path: out/*.json
+
+  analyze_lanl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Stream-analyze LANL cyber1
+        run: |
+          mkdir -p out
+          python scripts/analyze_other.py lanl . out/lanl_analysis.json "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lanl-analysis
+          path: out/lanl_analysis.json
+
+  analyze_bots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_SHINTIRU_CONF }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+      - name: Stream-analyze Splunk BOTS v1
+        run: |
+          mkdir -p out
+          python scripts/analyze_bots.py "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" out/bots_analysis.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bots-analysis
+          path: out/bots_analysis.json
