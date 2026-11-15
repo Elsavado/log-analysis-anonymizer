@@ -20,6 +20,7 @@ def anon_bots_line(line: str) -> str:
 
 def main():
     drive_id = sys.argv[1]
+    start_part = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     remote = "shintiru:"
 
     in_proc = subprocess.Popen(
@@ -27,7 +28,7 @@ def main():
         stdout=subprocess.PIPE,
     )
 
-    part_idx = 1
+    current_part = 1
     lines_in_part = 0
     max_lines_per_part = 2_000_000
     tmp_path = None
@@ -53,17 +54,16 @@ def main():
             os.remove(tmp_path)
             tmp_path = None
 
-    def open_next_part():
-        nonlocal part_idx, lines_in_part, tmp_path, gz_out
-        upload_and_close_current()
-        dst_name = f"env1_corp_logs_2017-08_part{part_idx:03d}.log.gz"
-        tmp_path = f"/tmp/{dst_name}"
-        print(f"Opening local buffer {tmp_path}", flush=True)
-        gz_out = gzip.open(tmp_path, mode="wb", compresslevel=3)
-        part_idx += 1
-        lines_in_part = 0
+    def ensure_part_open():
+        nonlocal tmp_path, gz_out
+        if current_part >= start_part and gz_out is None:
+            dst_name = f"env1_corp_logs_2017-08_part{current_part:03d}.log.gz"
+            tmp_path = f"/tmp/{dst_name}"
+            print(f"Opening local buffer {tmp_path}", flush=True)
+            gz_out = gzip.open(tmp_path, mode="wb", compresslevel=3)
 
-    open_next_part()
+    if start_part > 1:
+        print(f"Fast-forwarding past parts 1..{start_part - 1}...", flush=True)
 
     with tarfile.open(fileobj=in_proc.stdout, mode="r|gz") as tf:
         for member in tf:
@@ -80,10 +80,16 @@ def main():
                         txt = raw.decode("utf-8", errors="ignore")
                         if not txt.strip():
                             continue
-                        gz_out.write(anon_bots_line(txt).encode("utf-8"))
+                        if current_part >= start_part:
+                            ensure_part_open()
+                            gz_out.write(anon_bots_line(txt).encode("utf-8"))
                         lines_in_part += 1
                         if lines_in_part >= max_lines_per_part:
-                            open_next_part()
+                            upload_and_close_current()
+                            current_part += 1
+                            lines_in_part = 0
+                            if current_part == start_part:
+                                print(f"Reached start_part={start_part}, resuming anonymization.", flush=True)
             except Exception as e:
                 print(f"Warning reading {member.name}: {e}", flush=True)
 

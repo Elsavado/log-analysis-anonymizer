@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       run_all:
-        description: 'Run all jobs (false = only remaining bots + lanl dns/auth)'
+        description: 'Run all jobs (false = only remaining bots)'
         required: false
         default: 'false'
+      bots_start_part:
+        description: '1-based part index to resume anon_bots from'
+        required: false
+        default: '119'
 
 jobs:
   anon_small_and_otrf:
@@ -80,9 +84,10 @@ jobs:
           mkdir -p ~/.config/rclone
           printf '%s\n' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
       - name: Stream-anonymize Splunk BOTS v1
-        run: python scripts/anon_bots.py "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a"
+        run: python scripts/anon_bots.py "1SFkl3Gzxt9nKIZDbfaLuuDEnhwVjQj1a" "${{ github.event.inputs.bots_start_part || '119' }}"
 
   anon_lanl:
+    if: ${{ github.event.inputs.run_all == 'true' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
