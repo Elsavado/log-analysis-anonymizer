@@ -17,18 +17,28 @@ def stream_one(src_name: str, dst_name: str, drive_id: str, remote: str = "shint
         stdout=subprocess.PIPE,
     )
     out_proc = subprocess.Popen(
-        ["rclone", "rcat", f"{remote}anonymized/{dst_name}", "--drive-root-folder-id", drive_id],
+        [
+            "rclone", "rcat", f"{remote}anonymized/{dst_name}",
+            "--drive-root-folder-id", drive_id,
+            "--drive-chunk-size", "64M",
+        ],
         stdin=subprocess.PIPE,
     )
 
+    # Fast-path for billion-line LANL files: only invoke full regexes if email/lanl/alnl appears
     with gzip.GzipFile(fileobj=in_proc.stdout, mode="rb") as gz_in, \
-         gzip.GzipFile(fileobj=out_proc.stdin, mode="wb", compresslevel=6) as gz_out:
+         gzip.GzipFile(fileobj=out_proc.stdin, mode="wb", compresslevel=3) as gz_out:
         for raw in gz_in:
             line = raw.decode("utf-8", errors="ignore")
-            parts = line.split(",", 1)
-            if len(parts) == 2 and parts[0].isdigit():
-                t_shifted = int(parts[0]) + TIME_OFFSET
-                rest = anonymize_text(parts[1], date_delta=None)
+            comma = line.find(",")
+            if comma > 0 and line[:comma].isdigit():
+                t_shifted = int(line[:comma]) + TIME_OFFSET
+                rest = line[comma + 1:]
+                low = rest.lower()
+                if "lanl" in low or "alnl" in low or ("@" in rest and "." in rest[rest.find("@"):]):
+                    rest = anonymize_text(rest, date_delta=None)
+                else:
+                    rest = rest.replace("DOM1", "CORP1")
                 out_line = f"{t_shifted},{rest}"
             else:
                 out_line = anonymize_text(line, date_delta=None)

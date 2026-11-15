@@ -44,7 +44,11 @@ def main():
         dst_name = f"env1_corp_logs_2017-08_part{part_idx:03d}.log.gz"
         print(f"Opening upload stream -> anonymized/{dst_name}", flush=True)
         out_proc = subprocess.Popen(
-            ["rclone", "rcat", f"{remote}anonymized/{dst_name}", "--drive-root-folder-id", drive_id],
+            [
+                "rclone", "rcat", f"{remote}anonymized/{dst_name}",
+                "--drive-root-folder-id", drive_id,
+                "--drive-chunk-size", "64M",
+            ],
             stdin=subprocess.PIPE,
         )
         gz_out = gzip.GzipFile(fileobj=out_proc.stdin, mode="wb", compresslevel=6)
