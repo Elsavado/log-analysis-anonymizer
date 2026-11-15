@@ -87,12 +87,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kind: [dns, auth]
+        kind: [auth]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/share/swift
       - name: Install rclone
         run: curl -fsSL https://rclone.org/install.sh | sudo bash
       - name: Configure rclone

@@ -29,29 +29,37 @@ def main():
 
     part_idx = 1
     lines_in_part = 0
-    max_lines_per_part = 1_000_000
-    out_proc = None
+    max_lines_per_part = 2_000_000
+    tmp_path = None
     gz_out = None
 
-    def open_next_part():
-        nonlocal part_idx, lines_in_part, out_proc, gz_out
+    def upload_and_close_current():
+        nonlocal tmp_path, gz_out
         if gz_out is not None:
             gz_out.close()
-            out_proc.stdin.close()
-            rc = out_proc.wait()
-            if rc != 0:
-                raise RuntimeError(f"rclone rcat failed with {rc}")
+            gz_out = None
+            print(f"Uploading {tmp_path} -> anonymized/", flush=True)
+            subprocess.run(
+                [
+                    "rclone", "copy", tmp_path, f"{remote}anonymized",
+                    "--drive-root-folder-id", drive_id,
+                    "--drive-chunk-size", "128M",
+                    "--tpslimit", "2",
+                    "--retries", "15",
+                    "--low-level-retries", "30",
+                ],
+                check=True,
+            )
+            os.remove(tmp_path)
+            tmp_path = None
+
+    def open_next_part():
+        nonlocal part_idx, lines_in_part, tmp_path, gz_out
+        upload_and_close_current()
         dst_name = f"env1_corp_logs_2017-08_part{part_idx:03d}.log.gz"
-        print(f"Opening upload stream -> anonymized/{dst_name}", flush=True)
-        out_proc = subprocess.Popen(
-            [
-                "rclone", "rcat", f"{remote}anonymized/{dst_name}",
-                "--drive-root-folder-id", drive_id,
-                "--drive-chunk-size", "64M",
-            ],
-            stdin=subprocess.PIPE,
-        )
-        gz_out = gzip.GzipFile(fileobj=out_proc.stdin, mode="wb", compresslevel=6)
+        tmp_path = f"/tmp/{dst_name}"
+        print(f"Opening local buffer {tmp_path}", flush=True)
+        gz_out = gzip.open(tmp_path, mode="wb", compresslevel=3)
         part_idx += 1
         lines_in_part = 0
 
@@ -79,13 +87,7 @@ def main():
             except Exception as e:
                 print(f"Warning reading {member.name}: {e}", flush=True)
 
-    if gz_out is not None:
-        gz_out.close()
-        out_proc.stdin.close()
-        rc = out_proc.wait()
-        if rc != 0:
-            raise RuntimeError(f"rclone rcat failed with {rc}")
-
+    upload_and_close_current()
     in_proc.wait()
     print("BOTS v1 anonymization complete.", flush=True)
 

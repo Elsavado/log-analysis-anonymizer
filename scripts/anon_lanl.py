@@ -16,18 +16,10 @@ def stream_one(src_name: str, dst_name: str, drive_id: str, remote: str = "shint
         ["rclone", "cat", f"{remote}{src_name}", "--drive-root-folder-id", drive_id],
         stdout=subprocess.PIPE,
     )
-    out_proc = subprocess.Popen(
-        [
-            "rclone", "rcat", f"{remote}anonymized/{dst_name}",
-            "--drive-root-folder-id", drive_id,
-            "--drive-chunk-size", "64M",
-        ],
-        stdin=subprocess.PIPE,
-    )
-
+    tmp_path = f"/tmp/{dst_name}"
     # Fast-path for billion-line LANL files: only invoke full regexes if email/lanl/alnl appears
     with gzip.GzipFile(fileobj=in_proc.stdout, mode="rb") as gz_in, \
-         gzip.GzipFile(fileobj=out_proc.stdin, mode="wb", compresslevel=3) as gz_out:
+         gzip.open(tmp_path, mode="wb", compresslevel=3) as gz_out:
         for raw in gz_in:
             line = raw.decode("utf-8", errors="ignore")
             comma = line.find(",")
@@ -44,11 +36,23 @@ def stream_one(src_name: str, dst_name: str, drive_id: str, remote: str = "shint
                 out_line = anonymize_text(line, date_delta=None)
             gz_out.write(out_line.encode("utf-8"))
 
-    out_proc.stdin.close()
     rc_in = in_proc.wait()
-    rc_out = out_proc.wait()
-    if rc_in != 0 or rc_out != 0:
-        raise RuntimeError(f"rclone failed for {src_name}: in={rc_in}, out={rc_out}")
+    if rc_in != 0:
+        raise RuntimeError(f"rclone cat failed for {src_name}: in={rc_in}")
+
+    print(f"Uploading {tmp_path} -> anonymized/{dst_name}", flush=True)
+    subprocess.run(
+        [
+            "rclone", "copy", tmp_path, f"{remote}anonymized",
+            "--drive-root-folder-id", drive_id,
+            "--drive-chunk-size", "128M",
+            "--tpslimit", "2",
+            "--retries", "15",
+            "--low-level-retries", "30",
+        ],
+        check=True,
+    )
+    os.remove(tmp_path)
     print(f"Finished {dst_name}", flush=True)
 
 
